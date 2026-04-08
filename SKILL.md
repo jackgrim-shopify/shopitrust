@@ -1,15 +1,15 @@
 ---
 name: shopitrust
-description: Get a single, specific, actionable daily hint for improving your trust battery with a colleague. Pulls context from Slack DMs, email threads, calendar history, and Vault projects to surface real open loops and relationship signals — not generic advice. Use when you want to strengthen a working relationship or type /shopitrust <Name>.
+description: Get a trust battery score and one actionable tip for improving your relationship with a colleague. Starts at 0.5 (neutral) and moves up or down based on real signals from Slack, email, and calendar. Shows the score, what moved it, and exactly one thing to do today. Use when you want to strengthen a working relationship or type /shopitrust <Name>.
 ---
 
 # ShopiTrust
 
-Get a daily trust battery hint for a specific colleague — grounded in real context from Slack, email, calendar, and their active work. One actionable thing you can do today.
+Assess your trust battery with a colleague. Every relationship starts at **0.5** (neutral). Based on real signals from Slack, email, and calendar, the score moves up or down — then you get one specific thing to do today to improve it.
 
-The trust battery is a Shopify concept: every relationship has a charge level that goes up when you do what you say, acknowledge others' work, and close loops — and down when you don't. This skill surfaces where your battery might be draining and gives you one specific thing to act on today.
+The trust battery is a Shopify concept: every relationship has a charge level that goes up when you do what you say, acknowledge others' work, and close loops — and down when you don't.
 
-Uses Vault MCP, Slack MCP, and Google Workspace MCP if available. Degrades gracefully if any source is unavailable — skip it silently and work with what's connected.
+Uses Vault MCP, Slack MCP, and Google Workspace MCP if available. Degrades gracefully — skip any source silently and work with what's connected.
 
 The person to assess is in `$ARGUMENTS`. If no name is provided, ask the user.
 
@@ -20,8 +20,7 @@ The person to assess is in `$ARGUMENTS`. If no name is provided, ask the user.
 1. Search Vault: `vault_search_users` with the name from `$ARGUMENTS`.
    - If multiple matches, show top 3 and ask the user to confirm.
    - If one clear match, proceed.
-2. Call `vault_get_user` to get their full profile:
-   - Title, team, manager, tenure
+2. Call `vault_get_user` to get their full profile: title, team, manager, tenure.
 3. Call `vault_get_projects` with their user ID to get active GSD projects.
 
 Run the user lookup and project lookup in parallel.
@@ -34,14 +33,12 @@ Skip this step entirely if Slack MCP tools are not available.
 
 1. **DM history** — search for direct message threads with this person. Pull the last 20 messages.
 2. **Mentions** — search Slack for messages mentioning their name or handle in the last 30 days.
-3. **Identify open loops**:
-   - Did they ask you something you haven't replied to?
-   - Did you ask them something still unanswered (note: this is on them, not you)?
-   - Any commitments made in Slack that haven't been followed up on?
-4. **Identify positive signals**:
-   - Did you acknowledge their work or give them a shoutout recently?
-   - Did you respond quickly to their asks?
-   - Did you share credit or loop them into relevant conversations?
+3. Identify:
+   - Open loops: did they ask you something you haven't replied to?
+   - Commitments you made in Slack that haven't been followed up
+   - Quick responses you gave to their asks
+   - Shoutouts or acknowledgments you gave them
+   - Proactive info you shared that they'd care about
 
 ---
 
@@ -51,10 +48,10 @@ Skip if unavailable.
 
 Query: `from:<their email> OR to:<their email>` with `max_results: 10`.
 
-Look for:
-- Threads you started but haven't followed up on
-- Threads they started that you replied slowly or not at all
-- Any pending asks or decisions sitting in email
+Identify:
+- Threads they started that you haven't replied to or replied slowly
+- Pending asks or decisions sitting in your inbox
+- Threads you followed through on well
 
 ---
 
@@ -63,85 +60,108 @@ Look for:
 Skip if unavailable.
 
 1. Call `calendar_events` with `use_all_calendars: true`, `include_attendees: true`, past 60 days.
-2. Find shared events — 1:1s, syncs, reviews they were on.
-3. Note:
-   - When you last met
-   - Whether 1:1s are regular or sporadic
-   - Any upcoming meeting coming up soon
+2. Find shared events — 1:1s, syncs, reviews.
+3. Note: when you last met, regularity of meetings, whether any were cancelled.
 
 ---
 
 ## Step 5: Score the Trust Battery
 
-Based on all signals collected, categorize what you found:
+Start at **0.5**. Apply the following adjustments based on what you found. Each adjustment is additive — total is capped at 1.0 and floored at 0.0.
 
-**Draining signals (lower trust):**
-- Unanswered Slack messages or emails from them (open loops you own)
-- Commitments made and not followed up
-- Long gaps since last meaningful interaction (>3 weeks with no async either)
-- Meetings cancelled or rescheduled repeatedly
-- No acknowledgment of their recent work or wins
+**Charging adjustments (move score up):**
+| Signal | Adjustment |
+|--------|-----------|
+| Responded quickly (<24h) to their last Slack/email | +0.05 |
+| Closed an open loop from a previous interaction | +0.07 |
+| Acknowledged their work or gave them a shoutout recently | +0.08 |
+| Proactively shared something useful for them | +0.06 |
+| Regular 1:1 cadence in past 30 days (2+ meetings) | +0.07 |
+| Have met at least once in the last 30 days | +0.05 |
+| Followed through on a commitment they can verify | +0.08 |
 
-**Charging signals (higher trust):**
-- Quick response times
-- Followed through on past commitments
-- Gave them credit or acknowledged their work
-- Proactively shared information they'd care about
-- Regular 1:1 cadence maintained
+**Draining adjustments (move score down):**
+| Signal | Adjustment |
+|--------|-----------|
+| Unanswered message/email from them sitting >2 days | -0.10 |
+| Commitment made in Slack/email with no follow-up | -0.08 |
+| No interaction at all in the past 3 weeks | -0.07 |
+| New hire (<90 days) with no intro from you yet | -0.06 |
+| Cancelled or rescheduled meeting without rescheduling | -0.05 |
+| No acknowledgment of a visible win or milestone they had | -0.05 |
 
 **Neutral / insufficient data:**
-- No recent interaction found
-- MCP sources not available
+- If fewer than 2 data sources are available, note this and apply no adjustments. Score stays at 0.5.
 
-Produce a brief internal summary: `[DRAINING: <list>] [CHARGING: <list>]`
-
----
-
-## Step 6: Generate the Daily Hint
-
-Generate **exactly one hint**. It must be:
-- **Specific** — grounded in actual context found, not generic advice
-- **Actionable today** — something they can do in the next few hours
-- **Proportionate** — if the battery looks healthy, the hint should reflect that (a small gesture, not an intervention)
-
-Hint format:
-> **Your trust hint for [Name] today:**
-> [One sentence describing the specific action]
->
-> **Why:** [One sentence grounding it in what you found — the open loop, the gap, the win to acknowledge]
-
-Examples of good hints:
-> **Your trust hint for Sean Kelly today:**
-> Reply to his Slack message from 3 days ago about the identity_v1 model cost tradeoff — he asked for your read and hasn't heard back.
->
-> **Why:** Open loops are trust battery drains, and this one has been sitting for 3 days.
-
-> **Your trust hint for Sneha Shah today:**
-> Send her a quick note acknowledging the Human Detection 2026 Scope milestone — she just passed week 10 of 46 and it's a meaty project.
->
-> **Why:** Recognizing ongoing hard work charges the battery, especially mid-project when there's no visible finish line yet.
-
-> **Your trust hint for [Name] today:**
-> Your trust battery with them looks healthy — your last interaction was recent and responsive. Keep the cadence going: check if there's anything they need from you before your next 1:1.
->
-> **Why:** Batteries drain passively over time. A small proactive check-in is worth more than a big gesture later.
+Produce:
+1. Final score (e.g. `0.62`)
+2. The **single biggest factor** that moved the score — either the top draining signal or the top charging signal, whichever had the most impact
 
 ---
 
-## Step 7: Ask if They Want to Send It
+## Step 6: Display the Score and Key Driver
 
-After displaying the hint, ask:
+Display the result in this format:
 
-> Would you like me to send this hint as a Slack DM to yourself so you have it in your inbox today?
+```
+Trust Battery: [Name]
+Score: [X.XX] [visual bar using ▓░ characters, 10 blocks total]
 
-If yes, use `send_message` to DM the hint to the user's own Slack handle.
+[Score label based on range:]
+  0.0–0.3  → 🔴 Low — needs attention
+  0.3–0.5  → 🟡 Below neutral — room to grow
+  0.5–0.7  → 🟢 Healthy — keep it up
+  0.7–0.9  → 💚 Strong — this is a good relationship
+  0.9–1.0  → ⚡ Exceptional
+
+What moved it: [The single biggest factor — one sentence, specific to what was found]
+```
+
+Example:
+```
+Trust Battery: Sean Kelly
+Score: 0.42 ▓▓▓▓░░░░░░
+
+🟡 Below neutral — room to grow
+
+What moved it: There's an unanswered Slack message from him 3 days ago
+asking for your read on the identity_v1 cost tradeoff.
+```
+
+---
+
+## Step 7: Generate the One Tip
+
+Generate **exactly one tip** to improve the score. It must be:
+- **Specific** — grounded in the actual signals found, not generic
+- **Actionable today** — completable in the next few hours
+- **Targeted at the biggest drain** — fix the thing that moved the score down most, or if score is high, maintain momentum with a small gesture
+
+Format:
+```
+Today's tip:
+[One sentence — the specific action to take]
+
+Why this matters:
+[One sentence — the signal it addresses and how it charges the battery]
+```
+
+---
+
+## Step 8: Ask if They Want to Send It
+
+After displaying the score and tip, ask:
+
+> Would you like me to send this to yourself as a Slack DM so you have it in your inbox today?
+
+If yes, use `send_message` to DM the full result (score + tip) to the user's own Slack handle.
 
 ---
 
 ## Notes
 
-- Always generate exactly one hint — not a list, not multiple options.
-- If data is scarce (no Slack, no email, limited calendar), say so and generate a conservative hint based on what little is known about their role and projects.
-- The hint should never feel like a performance review — it's a nudge, not a diagnosis.
+- Always apply adjustments honestly — don't round up the score to make it feel better.
+- If data is scarce (no Slack, no email, limited calendar), state which sources were available and keep the score at 0.5 with a note that more data would improve accuracy.
+- The tip should never feel like a performance review — it's a nudge, not a diagnosis.
 - Trust battery is bidirectional, but this skill only surfaces things **you** can act on. Don't list things they owe you.
 - Today's date is available in system context as `currentDate`.
