@@ -108,6 +108,43 @@ cd ~/.claude/skills/shopitrust && git pull
 
 ---
 
+## Quick Site (Browser UI)
+
+A browser-based version lives in `site/index.html` — deploy it to Shopify's internal Quick platform so anyone can use it without Claude Code.
+
+### Deploy to Quick
+
+```bash
+# One-time setup
+quick auth
+quick init   # generates the Quick SKILL.md — prevents API hallucination
+
+# Deploy
+cd site
+quick deploy shopitrust
+```
+
+The site will be live at **`shopitrust.quick.shopify.io`**.
+
+### What it uses
+
+| Quick API | Used for |
+|-----------|----------|
+| `quick.ai` | Calls Claude (no API key needed — billed to corpo) |
+| `quick.id` | Gets the current user's name, email, Slack handle |
+| `quick.slack` | DMs the result to the user's own Slack |
+
+### Develop locally
+
+```bash
+cd site
+quick serve
+```
+
+Opens at `localhost:3000` — hot reloads on save.
+
+---
+
 ## Contributing
 
 PRs welcome — especially improvements to signal detection, scoring weights, or hint quality.
