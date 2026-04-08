@@ -1,72 +1,116 @@
 # ShopiTrust
 
-A Claude Code skill that gives you one specific, actionable daily hint for improving your trust battery with a colleague — grounded in real context from Slack, email, and calendar. Not generic advice. Actual open loops and relationship signals from your working history with them.
+A Claude Code skill that scores your trust battery with a colleague and gives you one specific, actionable tip to improve it — grounded in real signals from Slack, email, and calendar.
 
 ## What is a trust battery?
 
-A Shopify concept: every working relationship has a charge level. It goes up when you do what you say, respond quickly, give credit, and close loops. It goes down when you don't. This skill surfaces where yours might be draining — and gives you one thing to act on today.
+A Shopify concept: every working relationship has a charge level. It goes up when you do what you say, respond quickly, give credit, and close loops. It goes down when you don't.
 
-## What it does
+## How it works
 
-1. Looks up the person in Vault (name, team, active projects)
-2. Pulls your Slack DM history and mentions of them (last 30 days)
-3. Pulls recent email threads to/from them
-4. Checks calendar for when you last met and what's coming up
-5. Identifies open loops, long gaps, unacknowledged wins, and positive signals
-6. Generates **exactly one hint** — specific and actionable for today
-7. Optionally sends the hint as a Slack DM to yourself
+Every relationship starts at **0.5** (neutral). Based on real interaction signals, the score moves up or down:
+
+- **Charging signals** (+0.05 to +0.08 each): quick responses, closed loops, acknowledging someone's work, regular 1:1 cadence, proactive info sharing
+- **Draining signals** (-0.05 to -0.10 each): unanswered messages, broken commitments, cancelled meetings
+- **No interaction** → stays at 0.5, no penalty. The first interaction is an opportunity, not a deficit.
+
+Then you get one tip — specific to what was actually found, not generic advice.
+
+### Example output
+
+```
+Trust Battery: Sean Kelly
+Score: 0.42 ▓▓▓▓░░░░░░
+
+🟡 Below neutral — room to grow
+
+What moved it: There's an unanswered Slack message from him 3 days ago
+asking for your read on the identity_v1 cost tradeoff.
+
+Today's tip:
+Reply to Sean's Slack message from 3 days ago — he asked for your
+read on the identity_v1 cost tradeoff and hasn't heard back.
+
+Why this matters:
+Unanswered asks are the fastest way to drain a trust battery. This
+one is yours to close.
+```
 
 ## Requirements
 
 | MCP | Required? | Used for |
 |-----|-----------|----------|
-| [Vault MCP](https://vault.shopify.io/ai/mcp-servers) | Required | Person lookup, team context, active projects |
-| Slack MCP | Recommended | DM history, channel mentions, open loops |
+| [Vault MCP](https://vault.shopify.io/ai/mcp-servers) | Required | Person lookup, team, active projects |
+| Slack MCP | Recommended | DM history, mentions, open loops |
 | Google Workspace MCP | Optional | Email threads, calendar history |
 
-The skill degrades gracefully — if Slack or Google Workspace MCPs aren't connected, it skips those sources and works with what's available.
+Works with whatever MCPs you have connected — skips missing sources gracefully.
+
+---
 
 ## Installation
 
-### 1. Copy the skill to your Claude skills folder
+### Prerequisites
+- [Claude Code](https://claude.ai/code) installed
+- Vault MCP connected (required)
+- Slack MCP and/or Google Workspace MCP connected (recommended)
 
+### Step 1 — Copy the skill
+
+**Option A: git clone (recommended)**
 ```bash
 git clone https://github.com/Ratnachem/shopitrust.git ~/.claude/skills/shopitrust
 ```
 
-Or manually:
+**Option B: curl (no git needed)**
 ```bash
 mkdir -p ~/.claude/skills/shopitrust
 curl -o ~/.claude/skills/shopitrust/SKILL.md \
   https://raw.githubusercontent.com/Ratnachem/shopitrust/main/SKILL.md
 ```
 
-### 2. Restart Claude Code
+### Step 2 — Restart Claude Code
 
-The skill is picked up automatically on next session start.
+Skills are loaded at session start. Quit and reopen Claude Code, or start a new session.
 
-### 3. Use it
+### Step 3 — Run it
 
+Type in any Claude Code session:
 ```
+/shopitrust <Name>
+```
+
+Examples:
+```
+/shopitrust Amy Shaw
 /shopitrust Sean Kelly
-/shopitrust Sneha Shah
-/shopitrust          ← will ask you for a name
+/shopitrust          ← prompts you to enter a name
 ```
 
-## Example output
+### Staying up to date
 
+To pull the latest version of the skill:
+```bash
+cd ~/.claude/skills/shopitrust && git pull
 ```
-Your trust hint for Sean Kelly today:
-Reply to his Slack message from 3 days ago about the identity_v1 model 
-cost tradeoff — he asked for your read and hasn't heard back.
 
-Why: Open loops are trust battery drains, and this one has been sitting 
-for 3 days.
-```
+---
+
+## Score ranges
+
+| Score | Label |
+|-------|-------|
+| 0.0 – 0.3 | 🔴 Low — needs attention |
+| 0.3 – 0.5 | 🟡 Below neutral — room to grow |
+| 0.5 – 0.7 | 🟢 Healthy — keep it up |
+| 0.7 – 0.9 | 💚 Strong — this is a good relationship |
+| 0.9 – 1.0 | ⚡ Exceptional |
+
+---
 
 ## Contributing
 
-This is a personal skill built for Shopify's internal tooling stack. PRs welcome — especially improvements to the trust signal scoring logic or hint generation quality.
+PRs welcome — especially improvements to signal detection, scoring weights, or hint quality.
 
 ## Credits
 
